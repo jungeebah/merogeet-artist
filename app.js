@@ -98,14 +98,18 @@ function search_artist_info(artist){
 }
 
 app.get('/', function(req, res) {
-    (async() =>{
-        output= {} //will store the output
-        Promise.all([song_search(req.query.artist),search_artist_info(req.query.artist)]).then(function(results){
-            [output['song'],output['info']] = results;
-            res.setHeader('Content-Type', 'text/html');
-            res.send(output)
-        })
-    })();
+    if (Object.keys(req.query).length === 0){
+        res.send('Use artist key')
+    }else{
+        (async() =>{
+            output= {} //will store the output
+            Promise.all([song_search(req.query.artist),search_artist_info(req.query.artist)]).then(function(results){
+                [output['song'],output['info']] = results;
+                res.setHeader('Content-Type', 'text/html');
+                res.send(output)
+            }).catch(console.error);
+        })();
+    }
 });
 
 app.listen(port, function() {
