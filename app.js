@@ -70,22 +70,24 @@ function search_artist_info(artist){
             await page.waitFor(1000);
             searchBar.press('Enter');
 
-            var result = ''
+            var result = {}
             await page.waitForSelector('h3');
             const table = await page.$('table[class="rhsvw RJuLSb"]');
             const profile = await page.$('div[class="OOijTb"]')
             if (table){
                 const lists = await table.$$('tr')
                 for (const l of lists){
+                    title = await l.$eval('span[class="hl"]', span => span.textContent)
                     link = await l.$eval('a', a => a.href);
-                    result = link + ','+result
+                    result[title] = link 
                 }
             }
-            else if (profile){
+            if (profile){
                 const lists = await profile.$$('g-link')
                 for (const l of lists){
+                    title = await l.$eval('div[class="CtCigf"]', div => div.textContent)
                     link = await l.$eval('a', a => a.href);
-                    result = link + ','+result
+                    result[title] = link
                 }
             }
         await browser.close();
