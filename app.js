@@ -1,6 +1,8 @@
 const express = require('express');
 const app = express();
 const puppeteer = require('puppeteer');
+const fuzzy = require('fuzzyset.js')
+
 const port = process.env.PORT || 8080;
 
 function song_search(artist_name){
@@ -31,7 +33,21 @@ function song_search(artist_name){
                     for (t of text){
                         const names = await (await t.getProperty('textContent')).jsonValue()
                         if (names.toLowerCase() !== 'more'){
-                            if (album_list.indexOf(names) === -1) album_list.push(names);
+                            let add = true
+                            if (album_list && album_list.length > 0){
+                                album_list.forEach(function(element){
+                                    a = FuzzySet([element]);
+                                    matching = a.get(names)
+                                    if (matching !== null && matching[0][0] > .7 ){
+                                        add = false
+                                    }
+                                })
+                                if (add){
+                                    album_list.push(names)
+                                }
+                            }else{
+                                album_list.push(names)
+                            }
                         }
                         else {
                             click_page = t
@@ -40,7 +56,6 @@ function song_search(artist_name){
                     
                 }
             }
-
             if (await page.$('div[class="EDblX DAVP1"]') !== null){
                 const container = await page.$('div[class="EDblX DAVP1"]');
                 const list = await container.$$('div[class="rlc__slider-page"]');
@@ -59,12 +74,27 @@ function song_search(artist_name){
                             else{
                                 match = song_album.trim()
                             }
-                            if (album_list.indexOf(match) === -1) album_list.push(match);
+                            if (album_list && album_list.length > 0){
+                                let add = true
+                                album_list.forEach(function(element){
+                                    a = FuzzySet([element]);
+                                    matching = a.get(match)
+                                    if (matching){
+                                        if (matching !== null && matching[0][0] > .7){
+                                            add = false
+                                        }
+                                    }
+                                })
+                                if (add){
+                                    album_list.push(match)
+                                }
+                            }else{
+                                album_list.push(match)
+                            }
                         }
                         else{
                             song_album = ''
                         }
-                        // console.log(song_name);
                         song['name'] = song_name;
                         song['album'] = song_album;
                         song_list.push(song);
@@ -81,7 +111,23 @@ function song_search(artist_name){
                             other_listing = await album_l.$$('div[class="h998We mlo-c"]');
                             for(const o of other_listing){
                                 album = await o.$eval('div[class="title"]', a => a.innerText);
-                                if (album_list.indexOf(album) === -1) album_list.push(album);
+                                if (album_list && album_list.length > 0){
+                                    let add = true
+                                    album_list.forEach(function(element){
+                                        a = FuzzySet([element]);
+                                        matching = a.get(album)
+                                        if (matching){
+                                            if (matching !== null && matching[0][0] > .7){
+                                                add = false
+                                            }
+                                        }
+                                    })
+                                    if (add){
+                                        album_list.push(album);
+                                    }
+                                }else{
+                                    album_list.push(album)
+                                }
                             }
                         }
                     }
