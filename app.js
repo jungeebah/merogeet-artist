@@ -5,6 +5,8 @@ const port = process.env.PORT || 8080;
 
 function song_search(artist_name){
     song_list = []
+    album_list = []
+    let click_page = ''
     return new Promise(async (resolve, reject) => {
         try{
             const browser= await puppeteer.launch({
@@ -19,6 +21,26 @@ function song_search(artist_name){
             await page.waitFor(1000);
             searchBar.press('Enter');
             await page.waitForSelector('h3');
+            const info_list = await page.$$('div[class="Z1hOCe"]')
+            for (const l of info_list){
+                const li = await l.$('span[class="w8qArf"]');
+                const name = await li.$eval('a',a=>a.innerText)
+                if (name === 'Albums'){
+                    const data_span = await l.$('span[class="LrzXr kno-fv"]')
+                    const text = await data_span.$$('a')
+                    for (t of text){
+                        const names = await (await t.getProperty('textContent')).jsonValue()
+                        if (names.toLowerCase() !== 'more'){
+                            if (album_list.indexOf(names) === -1) album_list.push(names);
+                        }
+                        else {
+                            click_page = t
+                        }
+                    }
+                    
+                }
+            }
+
             if (await page.$('div[class="EDblX DAVP1"]') !== null){
                 const container = await page.$('div[class="EDblX DAVP1"]');
                 const list = await container.$$('div[class="rlc__slider-page"]');
@@ -29,18 +51,42 @@ function song_search(artist_name){
                         song_name = await o.$eval('div[class="title"]', a => a.innerText);
                         if (await o.$('div[class="jbzYp"]') !== null){
                             song_album = await o.$eval('div[class="jbzYp"]',a => a.innerText);
+                            const pattern = new RegExp(/(.*)\·(\s*)?([\d]*)/)
+                            let match = ''
+                            if (pattern.test(song_album)){
+                                match = pattern.exec(song_album)[1].trim()
+                            }
+                            else{
+                                match = song_album.trim()
+                            }
+                            if (album_list.indexOf(match) === -1) album_list.push(match);
                         }
                         else{
                             song_album = ''
                         }
                         // console.log(song_name);
-                        // console.log(song_album);
                         song['name'] = song_name;
                         song['album'] = song_album;
                         song_list.push(song);
                     }
 
                 }
+                if (click_page !== ''){
+                    await click_page.click()
+                    await page.waitForSelector('h3');
+                    if (await page.$('div[class="EDblX DAVP1"]') !== null){
+                        const album_container = await page.$('div[class="EDblX DAVP1"]');
+                        const album_listing = await album_container.$$('div[class="rlc__slider-page"]');
+                        for (const album_l of album_listing){
+                            other_listing = await album_l.$$('div[class="h998We mlo-c"]');
+                            for(const o of other_listing){
+                                album = await o.$eval('div[class="title"]', a => a.innerText);
+                                if (album_list.indexOf(album) === -1) album_list.push(album);
+                            }
+                        }
+                    }
+                }
+            song_list.push({'album':album_list})
             }
             else{
                 song_list = [];
